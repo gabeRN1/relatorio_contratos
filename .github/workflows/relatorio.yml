@@ -1,39 +1,49 @@
-name: Testar relatório CSV com Puppeteer
+name: Rodar relatório Kenlo
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  schedule:
+    - cron: '0 9 * * *'  # Executa todos os dias às 9h UTC
   workflow_dispatch:
 
 jobs:
-  run-ts-script:
+  build:
     runs-on: ubuntu-latest
 
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      USERNAME: ${{ secrets.USERNAME }}
-      PASSWORD: ${{ secrets.PASSWORD }}
-
     steps:
-      - name: 📥 Checkout do repositório
+      - name: Clonar repositório
         uses: actions/checkout@v3
 
-      - name: 🟢 Setup Node.js
+      - name: Instalar Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: '20'
 
-      - name: 📦 Instalar dependências
-        run: npm install
+      - name: Instalar dependências
+        run: npm ci
 
-      - name: 🛠️ Instalar TypeScript globalmente
-        run: npm install -g typescript
+      - name: Instalar tsx globalmente
+        run: npm install -g tsx
 
-      - name: 🧪 Rodar script TypeScript
-        run: npx ts-node relatorio_cobrança.ts
+      - name: Instalar Chrome (para Puppeteer)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
 
-      - name: 🧹 Limpar arquivos temporários
-        run: rm -rf ./downloads || true
+      - name: Rodar script principal
+        run: tsx relatorio_login.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          USERNAME: ${{ secrets.KENLO_USERNAME }}
+          PASSWORD: ${{ secrets.KENLO_PASSWORD }}
+          CI: true
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+
+      - name: Upload HTML de erro (se houver)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erro-relatorio-html
+          path: erro_download.html

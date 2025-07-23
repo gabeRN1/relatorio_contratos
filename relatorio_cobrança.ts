@@ -46,7 +46,9 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
   await page.evaluate(() => {
     document.querySelectorAll('#fieldset-CAMPOS_ADICIONAIS input[type="checkbox"]')
       .forEach(cb => {
-        if (cb instanceof HTMLInputElement) cb.checked = true;
+        if ((cb as any).checked !== undefined) {
+          (cb as any).checked = true;
+        }
       });
   });
 }
@@ -59,8 +61,8 @@ async function aplicarFiltros(page: puppeteer.Page) {
   await page.evaluate((inicio, fim) => {
     const dtInicio = document.querySelector('input[name="COM_DTAINICIAL"]');
     const dtFim = document.querySelector('input[name="COM_DTAFINAL"]');
-    if (dtInicio) (dtInicio as HTMLInputElement).value = inicio;
-    if (dtFim) (dtFim as HTMLInputElement).value = fim;
+    if (dtInicio) (dtInicio as any).value = inicio;
+    if (dtFim) (dtFim as any).value = fim;
   }, inicio, fim);
 
   console.log('🔍 Enviando filtros...');
@@ -77,10 +79,8 @@ async function baixarCSV(page: puppeteer.Page): Promise<string> {
 
   console.log('⬇️ Clicando no link de exportação do CSV');
   await page.evaluate(() => {
-    const linkCSV = Array.from(document.querySelectorAll('.dropdown-menu a')).find((a: any) =>
-      a.textContent?.includes('Exportar CSV')
-    ) as HTMLElement;
-
+    const linkCSV = Array.from(document.querySelectorAll('.dropdown-menu a'))
+      .find(a => a.textContent?.includes('Exportar CSV')) as HTMLElement;
     if (linkCSV) linkCSV.click();
   });
 
@@ -91,47 +91,49 @@ async function baixarCSV(page: puppeteer.Page): Promise<string> {
 }
 
 async function executarFluxo() {
-  console.log('🚀 Iniciando processo com Puppeteer...');
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox'],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, // ou deixe como undefined localmente
-  });
+  try {
+    console.log('🚀 Iniciando processo com Puppeteer...');
+    const browser = await puppeteer.launch({
+      headless: true ,
+      args: ['--no-sandbox'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    });
 
-  const page = await browser.newPage();
+    const page = await browser.newPage();
 
-  console.log(`⚙️ Definindo comportamento de download para: ${downloadPath}`);
-  const client = await page.target().createCDPSession();
-  await client.send('Page.setDownloadBehavior', {
-    behavior: 'allow',
-    downloadPath,
-  });
+    console.log(`⚙️ Definindo comportamento de download para: ${downloadPath}`);
+    const client = await page.target().createCDPSession();
+    await client.send('Page.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+    });
 
-  console.log('🌐 Acessando página do relatório...');
-  await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
-    waitUntil: 'networkidle2',
-  });
+    console.log('🌐 Acessando página do relatório...');
+    await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
+      waitUntil: 'networkidle2',
+    });
 
-  for (const status of STATUS_OPCOES) {
-    console.log(`\n============================`);
-    console.log(`🔄 Iniciando fluxo para status: ${status}`);
-    console.log(`============================`);
+    for (const status of STATUS_OPCOES) {
+      console.log(`\n============================`);
+      console.log(`🔄 Iniciando fluxo para status: ${status}`);
+      console.log(`============================`);
 
-    await selecionarStatus(page, status);
-    await marcarTodosCheckboxes(page);
-    await aplicarFiltros(page);
-    const arquivo = await baixarCSV(page);
+      await selecionarStatus(page, status);
+      await marcarTodosCheckboxes(page);
+      await aplicarFiltros(page);
+      const arquivo = await baixarCSV(page);
 
-    const novoNome = path.join(downloadPath, `relatorio_${status}_${Date.now()}.csv`);
-    fs.renameSync(arquivo, novoNome);
+      const novoNome = path.join(downloadPath, `relatorio_${status}_${Date.now()}.csv`);
+      fs.renameSync(arquivo, novoNome);
 
-    console.log(`✅ CSV final salvo como: ${novoNome}`);
+      console.log(`✅ CSV final salvo como: ${novoNome}`);
+    }
+
+    await browser.close();
+    console.log('🎉 Processo concluído com sucesso!');
+  } catch (err: any) {
+    console.error('❌ Erro geral:', err.stack || err.message || err);
   }
-
-  await browser.close();
-  console.log('🎉 Processo concluído com sucesso!');
 }
 
-executarFluxo().catch(err => {
-  console.error('❌ Erro geral:', err.stack || err.message || err);
-});
+executarFluxo();
