@@ -41,23 +41,6 @@ console.log('🍪 Cookies salvos:', cookies);
   return cookies;
 }
 
-
-
-
-
-function getDatasFiltro(): { inicio: string; fim: string } {
-  const hoje = new Date();
-  const ontem = new Date(hoje);
-  ontem.setDate(hoje.getDate() - 1);
-
-  const formatar = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-
-  return {
-    inicio: formatar(ontem),
-    fim: formatar(hoje),
-  };
-}
-
 async function waitForFile(dir: string, timeout = 30000): Promise<string> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -96,15 +79,6 @@ async function baixarRelatorio(): Promise<void> {
     await page.goto("https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A", {
       waitUntil: 'networkidle2'
     });
-
-    const { inicio, fim } = getDatasFiltro();
-
-    console.log(`📆 Preenchendo datas: ${inicio} a ${fim}`);
-    await page.waitForSelector('#p1_alt-dt_alteracao');
-    await page.evaluate((inicio, fim) => {
-      (document.querySelector('#p1_alt-dt_alteracao') as HTMLInputElement).value = inicio;
-      (document.querySelector('#p2_alt-dt_alteracao') as HTMLInputElement).value = fim;
-    }, inicio, fim);
 
     console.log('🔍 Aplicando filtros e carregando resultados...');
     await Promise.all([
