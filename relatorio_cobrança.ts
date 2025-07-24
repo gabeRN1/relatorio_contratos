@@ -201,7 +201,7 @@ async function executarFluxo() {
 
     await page.setCookie(...cookies);
 
-    await page.goto("https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117", {
+    await page.goto("https://apps.superlogica.net/imobiliaria/contratos/index", {
       waitUntil: 'networkidle2'
     });
 
