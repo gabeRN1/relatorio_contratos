@@ -44,7 +44,7 @@ console.log('🍪 Cookies salvos:', cookies);
 async function waitForFile(dir: string, timeout = 30000): Promise<string> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.xls') || f.endsWith('.xlsx'));
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.xls') || f.endsWith('.xlsx') || f.endsWith('.csv'));
     if (files.length > 0) {
       const fullPath = path.join(dir, files[0]);
       const stats = fs.statSync(fullPath);
