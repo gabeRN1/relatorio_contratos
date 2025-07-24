@@ -55,51 +55,6 @@ async function waitForFile(dir: string, timeout = 30000): Promise<string> {
   throw new Error('❌ Timeout esperando download do relatório.');
 }
 
-async function baixarRelatorio(): Promise<void> {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-  });
-
-  try {
-    console.log('🚀 Iniciando login e obtenção de cookies...');
-    const cookies = await loginPegarCookies(browser);
-    const page = await browser.newPage();
-
-    console.log('⚙️ Configurando comportamento de download...');
-    const client = await page.target().createCDPSession();
-    await client.send('Page.setDownloadBehavior', {
-      behavior: 'allow',
-      downloadPath,
-    });
-
-    console.log('🌐 Acessando página do relatório...');
-    await page.setCookie(...cookies);
-    await page.goto("https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A", {
-      waitUntil: 'networkidle2'
-    });
-
-    console.log('🔍 Aplicando filtros e carregando resultados...');
-    await Promise.all([
-      page.click('#btnSubmit'),
-      page.waitForNavigation({ waitUntil: 'networkidle2' }),
-    ]);
-
-    console.log('⬇️ Aguardando botão de download...');
-    await page.waitForSelector('#btnExcel', { timeout: 10000 });
-    await new Promise(r => setTimeout(r, 1500));
-    await page.click('#btnExcel');
-
-    console.log('⏳ Aguardando arquivo ser baixado...');
-    const caminhoXLS = await waitForFile(downloadPath);
-    console.log('✅ Relatório baixado em:', caminhoXLS);
-  } catch (err: any) {
-    console.error('❌ Erro ao baixar relatório:', err.message ?? err);
-  } finally {
-    await browser.close();
-  }
-}
 async function selecionarStatus(page: puppeteer.Page, valor: string) {
   console.log(`➡️ Selecionando status: ${valor}`);
   console.log('📍 URL atual:', page.url());
@@ -118,16 +73,6 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
       });
   });
 }
-
-async function aplicarFiltros(page: puppeteer.Page) {
-  
-  console.log('🔍 Enviando filtros...');
-  await Promise.all([
-    page.click('#btnSubmit'),
-    page.waitForNavigation({ waitUntil: 'networkidle2' }),
-  ]);
-}
-
 async function baixarCSV(page: puppeteer.Page): Promise<string> {
   console.log('📥 Aguardando botão de exportar CSV...');
   await page.waitForSelector('.dropdown-menu a[render="csv"]', { timeout: 10000 });
