@@ -18,10 +18,15 @@ const STATUS_OPCOES = ['ativos', 'pendentes', 'terminados'];
 
 async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
   const page = await browser.newPage();
+
+  console.log('🌐 Acessando página de login...');
   await page.goto('https://signin.valuegaia.com.br/?provider=imob', { waitUntil: 'networkidle2' });
+
+  console.log('🔐 Preenchendo dados de login...');
   await page.type('input[name="username"]', USERNAME);
   await page.type('input[name="password"]', PASSWORD);
 
+  console.log('➡️ Enviando login...');
   await Promise.all([
     page.click('#enter-login'),
     page.waitForNavigation({ waitUntil: 'networkidle2' }),
@@ -31,16 +36,16 @@ async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
     throw new Error('❌ Não está na página inicial esperada após login');
   }
 
+  console.log('✅ Login realizado com sucesso!');
+
   const cookies = await page.cookies();
   fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
-
-  await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
-    waitUntil: 'networkidle2',
-  });
+  console.log('🍪 Cookies salvos com sucesso.');
 
   await page.close();
   return cookies;
 }
+
 
 function getDatasFiltro(): { inicio: string; fim: string } {
   const hoje = new Date();
@@ -58,7 +63,7 @@ function getDatasFiltro(): { inicio: string; fim: string } {
 async function waitForFile(dir: string, timeout = 30000): Promise<string> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.csv'));
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.xls') || f.endsWith('.xlsx'));
     if (files.length > 0) {
       const fullPath = path.join(dir, files[0]);
       const stats = fs.statSync(fullPath);
@@ -66,9 +71,63 @@ async function waitForFile(dir: string, timeout = 30000): Promise<string> {
     }
     await new Promise(r => setTimeout(r, 1000));
   }
-  throw new Error('❌ Timeout esperando download do CSV.');
+  throw new Error('❌ Timeout esperando download do relatório.');
 }
 
+async function baixarRelatorio(): Promise<void> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+  });
+
+  try {
+    console.log('🚀 Iniciando login e obtenção de cookies...');
+    const cookies = await loginPegarCookies(browser);
+    const page = await browser.newPage();
+
+    console.log('⚙️ Configurando comportamento de download...');
+    const client = await page.target().createCDPSession();
+    await client.send('Page.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+    });
+
+    console.log('🌐 Acessando página do relatório...');
+    await page.setCookie(...cookies);
+    await page.goto("https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117", {
+      waitUntil: 'networkidle2'
+    });
+
+    const { inicio, fim } = getDatasFiltro();
+
+    console.log(`📆 Preenchendo datas: ${inicio} a ${fim}`);
+    await page.waitForSelector('#p1_alt-dt_alteracao');
+    await page.evaluate((inicio, fim) => {
+      (document.querySelector('#p1_alt-dt_alteracao') as HTMLInputElement).value = inicio;
+      (document.querySelector('#p2_alt-dt_alteracao') as HTMLInputElement).value = fim;
+    }, inicio, fim);
+
+    console.log('🔍 Aplicando filtros e carregando resultados...');
+    await Promise.all([
+      page.click('#btnSubmit'),
+      page.waitForNavigation({ waitUntil: 'networkidle2' }),
+    ]);
+
+    console.log('⬇️ Aguardando botão de download...');
+    await page.waitForSelector('#btnExcel', { timeout: 10000 });
+    await new Promise(r => setTimeout(r, 1500));
+    await page.click('#btnExcel');
+
+    console.log('⏳ Aguardando arquivo ser baixado...');
+    const caminhoXLS = await waitForFile(downloadPath);
+    console.log('✅ Relatório baixado em:', caminhoXLS);
+  } catch (err: any) {
+    console.error('❌ Erro ao baixar relatório:', err.message ?? err);
+  } finally {
+    await browser.close();
+  }
+}
 async function selecionarStatus(page: puppeteer.Page, valor: string) {
   console.log(`➡️ Selecionando status: ${valor}`);
   await page.select('#comStatus', valor);
