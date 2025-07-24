@@ -128,6 +128,7 @@ async function baixarRelatorio(): Promise<void> {
 }
 async function selecionarStatus(page: puppeteer.Page, valor: string) {
   console.log(`➡️ Selecionando status: ${valor}`);
+  console.log('📍 URL atual:', page.url());
     await page.click('#fieldset-OPCOES');
   await page.waitForSelector('#comStatus', { visible: true });
   await page.select('#comStatus', valor);
