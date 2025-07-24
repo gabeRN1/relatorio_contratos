@@ -108,10 +108,34 @@ async function executarFluxo() {
       downloadPath,
     });
 
-    console.log('🌐 Acessando página do relatório...');
-    await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
-      waitUntil: 'networkidle2',
-    });
+   console.log('🔐 Acessando página de login...');
+await page.goto('https://apps.superlogica.net/imobiliaria/login', {
+  waitUntil: 'networkidle2',
+});
+
+console.log('👤 Preenchendo usuário e senha...');
+await page.type('input[name="usuario"]', process.env.USERNAME || '');
+await page.type('input[name="senha"]', process.env.PASSWORD || '');
+
+// Clique no botão de login (ajuste o seletor se necessário)
+console.log('➡️ Enviando formulário de login...');
+await Promise.all([
+  page.click('button[type="submit"]'), // ou '#botaoLogin' se tiver ID
+  page.waitForNavigation({ waitUntil: 'networkidle2' }),
+]);
+
+// Confirma se login foi bem-sucedido
+const urlAtual = page.url();
+if (!urlAtual.includes('dashboard') && !urlAtual.includes('relatorios')) {
+  throw new Error(`❌ Login falhou. Ainda na página: ${urlAtual}`);
+}
+
+console.log('✅ Login feito com sucesso!');
+console.log('🌐 Acessando página do relatório...');
+await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
+  waitUntil: 'networkidle2',
+});
+
 
     for (const status of STATUS_OPCOES) {
       console.log(`\n============================`);
