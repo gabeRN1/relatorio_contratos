@@ -6,10 +6,21 @@ import { stringify } from 'csv-stringify/sync';
 export function adicionarColunaStatus(caminhoArquivo: string, status: string) {
   const conteudo = fs.readFileSync(caminhoArquivo, 'utf8');
 
-  const registros = parse(conteudo, {
-    columns: true,
-    skip_empty_lines: true
-  });
+ const linhas = conteudo.split('\n').filter(Boolean);
+const cabecalho = linhas[0].split(','); // ou usar parse(linhas[0]) com CSV-safe
+
+const registros = parse(conteudo, {
+  columns: true,
+  skip_empty_lines: true,
+  relax_column_count: true,
+  on_record: (record: Record<string, any>, context: any) => {
+    const actualCols = Object.keys(record).length;
+    if (actualCols !== cabecalho.length) {
+      console.warn(`⚠️ Linha ${context.lines}: esperadas ${cabecalho.length}, encontradas ${actualCols}`);
+    }
+    return record;
+  }
+});
 
   const registrosComStatus = registros.map((linha: any) => ({
     ...linha,
