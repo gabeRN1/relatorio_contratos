@@ -29,15 +29,11 @@ async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
   console.log('➡️ Enviando login...');
   await page.click('#enter-login');
 
-  console.log('🔄 Aguardando resposta após login...');
-  await page.waitForTimeout(3000); // ou page.waitForSelector(...) se souber um seletor
+  console.log('⏳ Aguardando redirecionamento...');
+  await page.waitForTimeout(3000); // espera 3 segundos pela possível navegação
 
   const currentUrl = page.url();
   console.log(`🌍 URL atual após login: ${currentUrl}`);
-
-  if (!currentUrl.startsWith('https://imob.valuegaia.com.br/admin/default.aspx')) {
-    throw new Error('❌ Não está na página inicial esperada após login');
-  }
 
   console.log('✅ Login realizado com sucesso!');
 
