@@ -32,6 +32,7 @@ async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
   console.log('⏳ Aguardando redirecionamento...');
   await new Promise(resolve => setTimeout(resolve, 3000)); // espera 3 segundos pela possível navegação
 
+  await page.goto('https://imob.valuegaia.com.br/admin/default.aspx#/home')
   const currentUrl = page.url();
   console.log(`🌍 URL atual após login: ${currentUrl}`);
 
