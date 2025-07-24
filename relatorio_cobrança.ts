@@ -3,9 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import dotenv from 'dotenv';
+import { Protocol } from 'puppeteer';
+import { Browser } from 'puppeteer';
+import { Cookie } from 'puppeteer';
 
 dotenv.config();
-
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const USERNAME = process.env.USERNAME!;
+const PASSWORD = process.env.PASSWORD!;
 const downloadPath = process.env.CI ? '/tmp' : path.join(os.homedir(), 'Downloads');
 const STATUS_OPCOES = ['ativos', 'pendentes', 'terminados'];
 
@@ -108,34 +114,32 @@ async function executarFluxo() {
       downloadPath,
     });
 
-   console.log('🔐 Acessando página de login...');
-await page.goto('https://apps.superlogica.net/imobiliaria/login', {
-  waitUntil: 'networkidle2',
-});
 
-console.log('👤 Preenchendo usuário e senha...');
-await page.type('input[name="usuario"]', process.env.USERNAME || '');
-await page.type('input[name="senha"]', process.env.PASSWORD || '');
+async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
+  const page = await browser.newPage();
+  await page.goto('https://signin.valuegaia.com.br/?provider=imob', { waitUntil: 'networkidle2' });
+  await page.type('input[name="username"]', USERNAME);
+  await page.type('input[name="password"]', PASSWORD);
 
-// Clique no botão de login (ajuste o seletor se necessário)
-console.log('➡️ Enviando formulário de login...');
-await Promise.all([
-  page.click('button[type="submit"]'), // ou '#botaoLogin' se tiver ID
-  page.waitForNavigation({ waitUntil: 'networkidle2' }),
-]);
+  await Promise.all([
+    page.click('#enter-login'),
+    page.waitForNavigation({ waitUntil: 'networkidle2' }),
+  ]);
 
-// Confirma se login foi bem-sucedido
-const urlAtual = page.url();
-if (!urlAtual.includes('dashboard') && !urlAtual.includes('relatorios')) {
-  throw new Error(`❌ Login falhou. Ainda na página: ${urlAtual}`);
+  if (!page.url().startsWith('https://imob.valuegaia.com.br/admin/default.aspx')) {
+    throw new Error('❌ Não está na página inicial esperada após login');
+  }
+
+  const cookies = await page.cookies();
+  fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
+
+  await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
+    waitUntil: 'networkidle2',
+  });
+
+  await page.close();
+  return cookies;
 }
-
-console.log('✅ Login feito com sucesso!');
-console.log('🌐 Acessando página do relatório...');
-await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
-  waitUntil: 'networkidle2',
-});
-
 
     for (const status of STATUS_OPCOES) {
       console.log(`\n============================`);
