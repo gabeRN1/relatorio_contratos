@@ -76,18 +76,18 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
 async function baixarCSV(page: puppeteer.Page): Promise<string> {
   console.log('📥 Clicando no botão "Mais opções"...');
 
-  // Usa XPath para localizar o botão que contém o texto "Mais opções"
-const [botaoMaisOpcoes] = await page.$x("//button[contains(text(), 'Mais opções')]") as [puppeteer.ElementHandle<Element>];
-if (!botaoMaisOpcoes) throw new Error('❌ Botão "Mais opções" não encontrado');
-await botaoMaisOpcoes.click();
+  await page.waitForSelector('button.dropdown-toggle', { timeout: 10000 });
 
+  await page.evaluate(() => {
+    const botao = Array.from(document.querySelectorAll('button.dropdown-toggle'))
+      .find(btn => btn.textContent?.includes('Mais opções')) as HTMLElement;
+    if (botao) botao.click();
+  });
 
   console.log('📥 Aguardando link "Exportar CSV"...');
 
-  // Aguarda o link "Exportar CSV" aparecer
   await page.waitForSelector('a[render="csv"]', { timeout: 10000 });
 
-  // Clica no link
   await page.evaluate(() => {
     const linkCSV = Array.from(document.querySelectorAll('a[render="csv"]'))
       .find(a => a.textContent?.includes('Exportar CSV')) as HTMLElement;
@@ -99,6 +99,7 @@ await botaoMaisOpcoes.click();
   console.log(`📄 Arquivo CSV baixado: ${filePath}`);
   return filePath;
 }
+
 
 async function executarFluxo() {
   const browser = await puppeteer.launch({
