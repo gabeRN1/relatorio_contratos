@@ -77,9 +77,10 @@ async function baixarCSV(page: puppeteer.Page): Promise<string> {
   console.log('📥 Clicando no botão "Mais opções"...');
 
   // Usa XPath para localizar o botão que contém o texto "Mais opções"
-  const [botaoMaisOpcoes] = await page.$x("//button[contains(text(), 'Mais opções')]");
-  if (!botaoMaisOpcoes) throw new Error('❌ Botão "Mais opções" não encontrado');
-  await botaoMaisOpcoes.click();
+const [botaoMaisOpcoes] = await page.$x("//button[contains(text(), 'Mais opções')]") as [puppeteer.ElementHandle<Element>];
+if (!botaoMaisOpcoes) throw new Error('❌ Botão "Mais opções" não encontrado');
+await botaoMaisOpcoes.click();
+
 
   console.log('📥 Aguardando link "Exportar CSV"...');
 
