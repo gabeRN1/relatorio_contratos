@@ -74,23 +74,45 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
   });
 }
 async function baixarCSV(page: puppeteer.Page): Promise<string> {
-  console.log('📥 Aguardando botão de exportar CSV...');
-  await page.waitForSelector('.dropdown-menu a[render="csv"]', { timeout: 10000 });
-  await new Promise(r => setTimeout(r, 1000));
+  console.log('👁️ Clicando no botão "Visualizar"...');
 
-  console.log('⬇️ Clicando no link de exportação do CSV');
-  await page.evaluate(() => {
+  await page.waitForSelector('a.btn.btn-success', { timeout: 10000 });
+  const clicou = await page.evaluate(() => {
+    const visualizarBtn = Array.from(document.querySelectorAll('a.btn.btn-success'))
+      .find(el => el.textContent?.trim() === 'Visualizar') as HTMLElement;
+    if (visualizarBtn) {
+      visualizarBtn.click();
+      return true;
+    }
+    return false;
+  });
+
+  if (!clicou) throw new Error('❌ Botão "Visualizar" não encontrado!');
+
+  // Aguarda carregamento do conteúdo após clicar em "Visualizar"
+  console.log('⏳ Aguardando conteúdo após clicar em "Visualizar"...');
+  await page.waitForSelector('.dropdown-menu a[render="csv"]', { timeout: 15000 });
+
+  await new Promise(r => setTimeout(r, 1500)); // dá um tempo de respiro
+
+  console.log('⬇️ Clicando no link de exportação do CSV...');
+  const linkClicado = await page.evaluate(() => {
     const linkCSV = Array.from(document.querySelectorAll('.dropdown-menu a'))
       .find(a => a.textContent?.includes('Exportar CSV')) as HTMLElement;
-    if (linkCSV) linkCSV.click();
+    if (linkCSV) {
+      linkCSV.click();
+      return true;
+    }
+    return false;
   });
+
+  if (!linkClicado) throw new Error('❌ Link "Exportar CSV" não encontrado!');
 
   console.log('⏳ Aguardando download do arquivo...');
   const filePath = await waitForFile(downloadPath, 30000);
   console.log(`📄 Arquivo CSV baixado: ${filePath}`);
   return filePath;
 }
-
 async function executarFluxo() {
   const browser = await puppeteer.launch({
     headless: true,
