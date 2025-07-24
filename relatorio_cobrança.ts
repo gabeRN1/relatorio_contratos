@@ -95,9 +95,9 @@ async function baixarCSV(page: puppeteer.Page): Promise<string> {
   });
 
   console.log('⏳ Aguardando download do arquivo...');
-  const filePath = await waitForFile(downloadPath, 30000);
-  console.log(`📄 Arquivo CSV baixado: ${filePath}`);
-  return filePath;
+  const caminhoXLS = await waitForFile(downloadPath);
+    console.log('✅ Relatório baixado em:', caminhoXLS);
+  return caminhoXLS;
 }
 
 
