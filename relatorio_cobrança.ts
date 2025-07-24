@@ -128,9 +128,9 @@ async function baixarRelatorio(): Promise<void> {
 }
 async function selecionarStatus(page: puppeteer.Page, valor: string) {
   console.log(`➡️ Selecionando status: ${valor}`);
+  await page.waitForSelector('#comStatus', { visible: true });
   await page.select('#comStatus', valor);
 }
-
 async function marcarTodosCheckboxes(page: puppeteer.Page) {
   console.log(`✅ Marcando todos os checkboxes adicionais`);
   await page.evaluate(() => {
