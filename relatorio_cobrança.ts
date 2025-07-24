@@ -32,7 +32,7 @@ async function loginPegarCookies(browser: Browser): Promise<Protocol.Network.Coo
 
   const cookies = await page.cookies();
   fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
-
+console.log('🍪 Cookies salvos:', cookies);
   await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
     waitUntil: 'networkidle2',
   });
