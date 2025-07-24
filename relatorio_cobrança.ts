@@ -15,6 +15,33 @@ const PASSWORD = process.env.PASSWORD!;
 const downloadPath = process.env.CI ? '/tmp' : path.join(os.homedir(), 'Downloads');
 const STATUS_OPCOES = ['ativos', 'pendentes', 'terminados'];
 
+
+async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
+  const page = await browser.newPage();
+  await page.goto('https://signin.valuegaia.com.br/?provider=imob', { waitUntil: 'networkidle2' });
+  await page.type('input[name="username"]', USERNAME);
+  await page.type('input[name="password"]', PASSWORD);
+
+  await Promise.all([
+    page.click('#enter-login'),
+    page.waitForNavigation({ waitUntil: 'networkidle2' }),
+  ]);
+
+  if (!page.url().startsWith('https://imob.valuegaia.com.br/admin/default.aspx')) {
+    throw new Error('❌ Não está na página inicial esperada após login');
+  }
+
+  const cookies = await page.cookies();
+  fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
+
+  await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
+    waitUntil: 'networkidle2',
+  });
+
+  await page.close();
+  return cookies;
+}
+
 function getDatasFiltro(): { inicio: string; fim: string } {
   const hoje = new Date();
   const ontem = new Date(hoje);
@@ -27,24 +54,7 @@ function getDatasFiltro(): { inicio: string; fim: string } {
     fim: formatar(hoje),
   };
 }
-async function aplicarFiltros(page: puppeteer.Page) {
-  const { inicio, fim } = getDatasFiltro();
-  console.log(`📆 Aplicando filtros de data: ${inicio} a ${fim}`);
 
-  await page.waitForSelector('input[name="COM_DTAINICIAL"]');
-  await page.evaluate((inicio, fim) => {
-    const dtInicio = document.querySelector('input[name="COM_DTAINICIAL"]');
-    const dtFim = document.querySelector('input[name="COM_DTAFINAL"]');
-    if (dtInicio) (dtInicio as any).value = inicio;
-    if (dtFim) (dtFim as any).value = fim;
-  }, inicio, fim);
-
-  console.log('🔍 Enviando filtros...');
-  await Promise.all([
-    page.click('#btnSubmit'),
-    page.waitForNavigation({ waitUntil: 'networkidle2' }),
-  ]);
-}
 async function waitForFile(dir: string, timeout = 30000): Promise<string> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -76,7 +86,24 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
   });
 }
 
+async function aplicarFiltros(page: puppeteer.Page) {
+  const { inicio, fim } = getDatasFiltro();
+  console.log(`📆 Aplicando filtros de data: ${inicio} a ${fim}`);
 
+  await page.waitForSelector('input[name="COM_DTAINICIAL"]');
+  await page.evaluate((inicio, fim) => {
+    const dtInicio = document.querySelector('input[name="COM_DTAINICIAL"]');
+    const dtFim = document.querySelector('input[name="COM_DTAFINAL"]');
+    if (dtInicio) (dtInicio as any).value = inicio;
+    if (dtFim) (dtFim as any).value = fim;
+  }, inicio, fim);
+
+  console.log('🔍 Enviando filtros...');
+  await Promise.all([
+    page.click('#btnSubmit'),
+    page.waitForNavigation({ waitUntil: 'networkidle2' }),
+  ]);
+}
 
 async function baixarCSV(page: puppeteer.Page): Promise<string> {
   console.log('📥 Aguardando botão de exportar CSV...');
@@ -100,10 +127,13 @@ async function executarFluxo() {
   try {
     console.log('🚀 Iniciando processo com Puppeteer...');
     const browser = await puppeteer.launch({
-      headless: true ,
+      headless: true,
       args: ['--no-sandbox'],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     });
+
+    // ⬇️ Efetua login antes de seguir
+    await loginPegarCookies(browser);
 
     const page = await browser.newPage();
 
@@ -114,32 +144,11 @@ async function executarFluxo() {
       downloadPath,
     });
 
-
-async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
-  const page = await browser.newPage();
-  await page.goto('https://signin.valuegaia.com.br/?provider=imob', { waitUntil: 'networkidle2' });
-  await page.type('input[name="username"]', USERNAME);
-  await page.type('input[name="password"]', PASSWORD);
-
-  await Promise.all([
-    page.click('#enter-login'),
-    page.waitForNavigation({ waitUntil: 'networkidle2' }),
-  ]);
-
-  if (!page.url().startsWith('https://imob.valuegaia.com.br/admin/default.aspx')) {
-    throw new Error('❌ Não está na página inicial esperada após login');
-  }
-
-  const cookies = await page.cookies();
-  fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
-
-  await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
-    waitUntil: 'networkidle2',
-  });
-
-  await page.close();
-  return cookies;
-}
+    // ⬇️ Acesse diretamente a URL de relatório após login
+    console.log('🌐 Acessando página do relatório...');
+    await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
+      waitUntil: 'networkidle2',
+    });
 
     for (const status of STATUS_OPCOES) {
       console.log(`\n============================`);
@@ -163,5 +172,6 @@ async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
     console.error('❌ Erro geral:', err.stack || err.message || err);
   }
 }
+
 
 executarFluxo();
