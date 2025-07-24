@@ -17,7 +17,7 @@ const STATUS_OPCOES = ['ativos', 'pendentes', 'terminados'];
 
 async function loginPegarCookies(browser: Browser): Promise<Protocol.Network.Cookie[]> {
   const page = await browser.newPage();
-  await page.goto('https://signin.valuegaia.com.br/?provider=imob', { waitUntil: 'networkidle2' });
+  await page.goto('https://signin.valuegaia.com.br/?provider=locacao', { waitUntil: 'networkidle2' });
   await page.type('input[name="username"]', USERNAME);
   await page.type('input[name="password"]', PASSWORD);
 
@@ -26,14 +26,14 @@ async function loginPegarCookies(browser: Browser): Promise<Protocol.Network.Coo
     page.waitForNavigation({ waitUntil: 'networkidle2' }),
   ]);
 
-  if (!page.url().startsWith('https://imob.valuegaia.com.br/admin/default.aspx')) {
+  if (!page.url().startsWith('https://apps.superlogica.net/imobiliaria')) {
     throw new Error('❌ Não está na página inicial esperada após login');
   }
 
   const cookies = await page.cookies();
   fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
 
-  await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
+  await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
     waitUntil: 'networkidle2',
   });
 
@@ -93,7 +93,7 @@ async function baixarRelatorio(): Promise<void> {
 
     console.log('🌐 Acessando página do relatório...');
     await page.setCookie(...cookies);
-    await page.goto("https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117", {
+    await page.goto("https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A", {
       waitUntil: 'networkidle2'
     });
 
