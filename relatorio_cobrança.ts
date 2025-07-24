@@ -27,7 +27,24 @@ function getDatasFiltro(): { inicio: string; fim: string } {
     fim: formatar(hoje),
   };
 }
+async function aplicarFiltros(page: puppeteer.Page) {
+  const { inicio, fim } = getDatasFiltro();
+  console.log(`📆 Aplicando filtros de data: ${inicio} a ${fim}`);
 
+  await page.waitForSelector('input[name="COM_DTAINICIAL"]');
+  await page.evaluate((inicio, fim) => {
+    const dtInicio = document.querySelector('input[name="COM_DTAINICIAL"]');
+    const dtFim = document.querySelector('input[name="COM_DTAFINAL"]');
+    if (dtInicio) (dtInicio as any).value = inicio;
+    if (dtFim) (dtFim as any).value = fim;
+  }, inicio, fim);
+
+  console.log('🔍 Enviando filtros...');
+  await Promise.all([
+    page.click('#btnSubmit'),
+    page.waitForNavigation({ waitUntil: 'networkidle2' }),
+  ]);
+}
 async function waitForFile(dir: string, timeout = 30000): Promise<string> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -59,24 +76,7 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
   });
 }
 
-async function aplicarFiltros(page: puppeteer.Page) {
-  const { inicio, fim } = getDatasFiltro();
-  console.log(`📆 Aplicando filtros de data: ${inicio} a ${fim}`);
 
-  await page.waitForSelector('input[name="COM_DTAINICIAL"]');
-  await page.evaluate((inicio, fim) => {
-    const dtInicio = document.querySelector('input[name="COM_DTAINICIAL"]');
-    const dtFim = document.querySelector('input[name="COM_DTAFINAL"]');
-    if (dtInicio) (dtInicio as any).value = inicio;
-    if (dtFim) (dtFim as any).value = fim;
-  }, inicio, fim);
-
-  console.log('🔍 Enviando filtros...');
-  await Promise.all([
-    page.click('#btnSubmit'),
-    page.waitForNavigation({ waitUntil: 'networkidle2' }),
-  ]);
-}
 
 async function baixarCSV(page: puppeteer.Page): Promise<string> {
   console.log('📥 Aguardando botão de exportar CSV...');
