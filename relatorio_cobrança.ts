@@ -30,7 +30,7 @@ async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
   await page.click('#enter-login');
 
   console.log('⏳ Aguardando redirecionamento...');
-  await page.waitForTimeout(3000); // espera 3 segundos pela possível navegação
+  await new Promise(resolve => setTimeout(resolve, 3000)); // espera 3 segundos pela possível navegação
 
   const currentUrl = page.url();
   console.log(`🌍 URL atual após login: ${currentUrl}`);
