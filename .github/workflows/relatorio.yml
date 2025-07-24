@@ -27,10 +27,10 @@ jobs:
       - name: Rodar script de relatório
         run: npx tsx relatorio_cobrança.ts
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          USERNAME: ${{ secrets.KENLO_USERNAME }}
-          PASSWORD: ${{ secrets.KENLO_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL}}
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
 
       - name: Upload HTML de erro (se houver)
         if: failure()
