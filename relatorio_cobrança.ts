@@ -181,30 +181,26 @@ async function baixarCSV(page: puppeteer.Page): Promise<string> {
 }
 
 async function executarFluxo() {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+  });
+
   try {
-    console.log('🚀 Iniciando processo com Puppeteer...');
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    });
-
-    // ⬇️ Efetua login antes de seguir
-    await loginPegarCookies(browser);
-
+    const cookies = await loginPegarCookies(browser);
     const page = await browser.newPage();
 
-    console.log(`⚙️ Definindo comportamento de download para: ${downloadPath}`);
     const client = await page.target().createCDPSession();
     await client.send('Page.setDownloadBehavior', {
       behavior: 'allow',
       downloadPath,
     });
 
-    // ⬇️ Acesse diretamente a URL de relatório após login
-    console.log('🌐 Acessando página do relatório...');
-    await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
-      waitUntil: 'networkidle2',
+    await page.setCookie(...cookies);
+
+    await page.goto("https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117", {
+      waitUntil: 'networkidle2'
     });
 
     for (const status of STATUS_OPCOES) {
