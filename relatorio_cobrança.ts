@@ -121,7 +121,6 @@ async function executarFluxo() {
 
       await selecionarStatus(page, status);
       await marcarTodosCheckboxes(page);
-      await aplicarFiltros(page);
       const arquivo = await baixarCSV(page);
 
       const novoNome = path.join(downloadPath, `relatorio_${status}_${Date.now()}.csv`);
