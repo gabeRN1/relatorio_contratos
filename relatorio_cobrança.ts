@@ -28,7 +28,6 @@ async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
 
   console.log('➡️ Enviando login...');
  await Promise.all([
-  page.waitForNavigation({ waitUntil: 'networkidle2' }),
   page.click('#enter-login'),
 ]);
 
