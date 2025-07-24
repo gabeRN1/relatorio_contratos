@@ -201,7 +201,7 @@ async function executarFluxo() {
 
     await page.setCookie(...cookies);
 
-    await page.goto("https://apps.superlogica.net/imobiliaria/contratos/index", {
+    await page.goto("https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A", {
       waitUntil: 'networkidle2'
     });
 
