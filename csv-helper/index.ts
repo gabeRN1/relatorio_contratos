@@ -2,25 +2,46 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 import { stringify } from 'csv-stringify/sync';
+import iconv from 'iconv-lite';
+
+function limparChaves(obj: Record<string, any>): Record<string, any> {
+  const novo: Record<string, any> = {};
+  for (const chave in obj) {
+    const novaChave = chave
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .replace(/[^a-zA-Z0-9_]/g, '_')  // troca caracteres especiais por "_"
+      .replace(/_+/g, '_')             // junta múltiplos _ seguidos
+      .replace(/^_+|_+$/g, '')         // remove _ no início/fim
+      .toLowerCase();                 // padroniza para minúsculas
+    novo[novaChave] = obj[chave];
+  }
+  return novo;
+}
 
 export function adicionarColunaStatus(caminhoArquivo: string, status: string) {
-  const conteudo = fs.readFileSync(caminhoArquivo, 'utf8');
+  const buffer = fs.readFileSync(caminhoArquivo);
+  const conteudo = iconv.decode(buffer, 'latin1');
 
- const linhas = conteudo.split('\n').filter(Boolean);
-const cabecalho = linhas[0].split(','); // ou usar parse(linhas[0]) com CSV-safe
+  const linhas = conteudo.split('\n').filter(Boolean);
+  const cabecalho = linhas[0].split(',');
 
-const registros = parse(conteudo, {
-  columns: true,
-  skip_empty_lines: true,
-  relax_column_count: true,
-  on_record: (record: Record<string, any>, context: any) => {
-    const actualCols = Object.keys(record).length;
-    if (actualCols !== cabecalho.length) {
-      console.warn(`⚠️ Linha ${context.lines}: esperadas ${cabecalho.length}, encontradas ${actualCols}`);
+  const registros = parse(conteudo, {
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+    relax_quotes: true,
+    delimiter: ',',
+    quote: '"',
+    trim: true,
+    on_record: (record: Record<string, any>, context: any) => {
+      const actualCols = Object.keys(record).length;
+      if (actualCols !== cabecalho.length) {
+        console.warn(`⚠️ Linha ${context.lines}: esperadas ${cabecalho.length}, encontradas ${actualCols}`);
+      }
+      return limparChaves(record); // aplica padronização aqui
     }
-    return record;
-  }
-});
+  });
 
   const registrosComStatus = registros.map((linha: any) => ({
     ...linha,
@@ -39,11 +60,18 @@ export function juntarCSVPorStatus(arquivos: string[], caminhoSaida: string) {
   let todosRegistros: any[] = [];
 
   for (const caminho of arquivos) {
-    const conteudo = fs.readFileSync(caminho, 'utf8');
+    const buffer = fs.readFileSync(caminho);
+    const conteudo = iconv.decode(buffer, 'latin1');
 
     const registros = parse(conteudo, {
       columns: true,
       skip_empty_lines: true,
+      relax_column_count: true,
+      relax_quotes: true,
+      delimiter: ',',
+      quote: '"',
+      trim: true,
+      on_record: limparChaves
     });
 
     todosRegistros.push(...registros);
