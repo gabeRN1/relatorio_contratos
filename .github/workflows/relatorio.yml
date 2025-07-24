@@ -1,8 +1,8 @@
-name: Rodar relatório Kenlo
+name: Rodar relatório de cobrança
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # Executa todos os dias às 9h UTC
+    - cron: '0 9 * * *' # Roda todo dia às 9h UTC
   workflow_dispatch:
 
 jobs:
@@ -21,25 +21,16 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Instalar tsx globalmente
-        run: npm install -g tsx
+      - name: Instalar navegador Chrome usado pelo Puppeteer
+        run: npx puppeteer browsers install chrome
 
-      - name: Instalar Chrome (para Puppeteer)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
-        env:
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
-
-      - name: Rodar script principal
-        run: tsx relatorio_login.ts
+      - name: Rodar script de relatório
+        run: npx tsx relatorio_cobrança.ts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           USERNAME: ${{ secrets.KENLO_USERNAME }}
           PASSWORD: ${{ secrets.KENLO_PASSWORD }}
-          CI: true
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
 
       - name: Upload HTML de erro (se houver)
         if: failure()
