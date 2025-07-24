@@ -3,9 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import dotenv from 'dotenv';
-import { Protocol } from 'puppeteer';
 import { Browser } from 'puppeteer';
-import { Cookie } from 'puppeteer';
+import type { Protocol } from 'devtools-protocol';
 
 dotenv.config();
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -16,35 +15,34 @@ const downloadPath = process.env.CI ? '/tmp' : path.join(os.homedir(), 'Download
 const STATUS_OPCOES = ['ativos', 'pendentes', 'terminados'];
 
 
-async function loginPegarCookies(browser: Browser): Promise<Cookie[]> {
+async function loginPegarCookies(browser: Browser): Promise<Protocol.Network.Cookie[]> {
   const page = await browser.newPage();
-
-  console.log('🌐 Acessando página de login...');
   await page.goto('https://signin.valuegaia.com.br/?provider=imob', { waitUntil: 'networkidle2' });
-
-  console.log('🔐 Preenchendo dados de login...');
   await page.type('input[name="username"]', USERNAME);
   await page.type('input[name="password"]', PASSWORD);
 
-  console.log('➡️ Enviando login...');
-  await page.click('#enter-login');
+  await Promise.all([
+    page.click('#enter-login'),
+    page.waitForNavigation({ waitUntil: 'networkidle2' }),
+  ]);
 
-  console.log('⏳ Aguardando redirecionamento...');
-  await new Promise(resolve => setTimeout(resolve, 3000)); // espera 3 segundos pela possível navegação
-
-  await page.goto('https://imob.valuegaia.com.br/admin/default.aspx#/home')
-  const currentUrl = page.url();
-  console.log(`🌍 URL atual após login: ${currentUrl}`);
-
-  console.log('✅ Login realizado com sucesso!');
+  if (!page.url().startsWith('https://imob.valuegaia.com.br/admin/default.aspx')) {
+    throw new Error('❌ Não está na página inicial esperada após login');
+  }
 
   const cookies = await page.cookies();
   fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
-  console.log('🍪 Cookies salvos com sucesso.');
+
+  await page.goto('https://imob.valuegaia.com.br/admin/modules/relatorios/relatoriosFiltro.aspx?id=117', {
+    waitUntil: 'networkidle2',
+  });
 
   await page.close();
   return cookies;
 }
+
+
+
 
 
 function getDatasFiltro(): { inicio: string; fim: string } {
