@@ -4,9 +4,8 @@ import path from 'path';
 import os from 'os';
 import dotenv from 'dotenv';
 import { Browser } from 'puppeteer';
-import type { Protocol } from 'devtools-protocol';
+import { Protocol } from 'devtools-protocol';
 import { adicionarColunaStatus, juntarCSVPorStatus } from './csv-helper';
-
 
 dotenv.config();
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -15,7 +14,6 @@ const USERNAME = process.env.USERNAME!;
 const PASSWORD = process.env.PASSWORD!;
 const downloadPath = process.env.CI ? '/tmp' : path.join(os.homedir(), 'Downloads');
 const STATUS_OPCOES = ['ativos', 'pendentes', 'terminados'];
-
 
 async function loginPegarCookies(browser: Browser): Promise<Protocol.Network.Cookie[]> {
   const page = await browser.newPage();
@@ -34,7 +32,7 @@ async function loginPegarCookies(browser: Browser): Promise<Protocol.Network.Coo
 
   const cookies = await page.cookies();
   fs.writeFileSync(path.join(process.cwd(), 'cookies.json'), JSON.stringify(cookies, null, 2));
-console.log('🍪 Cookies salvos:', cookies);
+  console.log('🍪 Cookies salvos:', cookies);
   await page.goto('https://apps.superlogica.net/imobiliaria/relatorios/id/0026012A', {
     waitUntil: 'networkidle2',
   });
@@ -60,10 +58,11 @@ async function waitForFile(dir: string, timeout = 30000): Promise<string> {
 async function selecionarStatus(page: puppeteer.Page, valor: string) {
   console.log(`➡️ Selecionando status: ${valor}`);
   console.log('📍 URL atual:', page.url());
-    await page.click('#fieldset-OPCOES');
+  await page.click('#fieldset-OPCOES');
   await page.waitForSelector('#comStatus', { visible: true });
   await page.select('#comStatus', valor);
 }
+
 async function marcarTodosCheckboxes(page: puppeteer.Page) {
   console.log(`✅ Marcando todos os checkboxes adicionais`);
   await page.evaluate(() => {
@@ -75,6 +74,7 @@ async function marcarTodosCheckboxes(page: puppeteer.Page) {
       });
   });
 }
+
 async function baixarCSV(page: puppeteer.Page): Promise<string> {
   console.log('📥 Clicando no botão "Mais opções"...');
 
@@ -98,10 +98,9 @@ async function baixarCSV(page: puppeteer.Page): Promise<string> {
 
   console.log('⏳ Aguardando download do arquivo...');
   const caminhoXLS = await waitForFile(downloadPath);
-    console.log('✅ Relatório baixado em:', caminhoXLS);
+  console.log('✅ Relatório baixado em:', caminhoXLS);
   return caminhoXLS;
 }
-
 
 async function executarFluxo() {
   const browser = await puppeteer.launch({
@@ -126,6 +125,9 @@ async function executarFluxo() {
       waitUntil: 'networkidle2'
     });
 
+    // Lista de arquivos processados para a junção final
+    const arquivosCSV: string[] = [];
+
     for (const status of STATUS_OPCOES) {
       console.log(`\n============================`);
       console.log(`🔄 Iniciando fluxo para status: ${status}`);
@@ -135,18 +137,27 @@ async function executarFluxo() {
       await marcarTodosCheckboxes(page);
       const arquivo = await baixarCSV(page);
 
+      // Novo nome de arquivo
       const novoNome = path.join(downloadPath, `relatorio_${status}_${Date.now()}.csv`);
       fs.renameSync(arquivo, novoNome);
-
       console.log(`✅ CSV final salvo como: ${novoNome}`);
+
+      // Adicionando a coluna de status
+      await adicionarColunaStatus(novoNome, status);
+
+      // Armazenando o caminho para juntar depois
+      arquivosCSV.push(novoNome);
     }
 
-    await browser.close();
+    // Agora junta os arquivos
+    const caminhoFinal = path.join(downloadPath, `relatorio_final_${Date.now()}.csv`);
+    await juntarCSVPorStatus(arquivosCSV, caminhoFinal);
+
     console.log('🎉 Processo concluído com sucesso!');
+    await browser.close();
   } catch (err: any) {
     console.error('❌ Erro geral:', err.stack || err.message || err);
   }
 }
-
 
 executarFluxo();
