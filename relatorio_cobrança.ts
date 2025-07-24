@@ -5,6 +5,8 @@ import os from 'os';
 import dotenv from 'dotenv';
 import { Browser } from 'puppeteer';
 import type { Protocol } from 'devtools-protocol';
+import { adicionarColunaStatus, juntarCSVPorStatus } from './csv-helper';
+
 
 dotenv.config();
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;

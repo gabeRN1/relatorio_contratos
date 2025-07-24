@@ -1,5 +1,5 @@
 {
-  "name": "node_gest_contratos",
+  "name": "nodejs_relatorio_kenlo",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -12,17 +12,23 @@
   "type": "commonjs",
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
+    "axios": "^1.10.0",
+    "axios-cookiejar-support": "^6.0.4",
+    "cheerio": "^1.1.0",
     "dotenv": "^17.2.0",
     "he": "^1.2.0",
-    "puppeteer": "^24.15.0",
+    "puppeteer": "^24.14.0",
+    "tough-cookie": "^5.1.2",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.35",
     "@types/he": "^1.2.3",
-    "@types/node": "^24.1.0",
-    "@types/puppeteer": "^5.4.7",
+    "@types/node": "^24.0.14",
     "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }
